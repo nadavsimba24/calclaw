@@ -1,0 +1,130 @@
+# CalcLaw Complete Configuration
+# Includes NVIDIA AI, TTS, and Skills system
+
+[server]
+port = 3000
+host = "127.0.0.1"
+log_level = "info"
+data_dir = "./data"
+
+[nvidia]
+# Your NVIDIA API key from https://build.nvidia.com/
+api_key = "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"
+base_url = "https://integrate.api.nvidia.com/v1"
+model = "meta/llama-3.1-8b-instruct"
+temperature = 0.7
+max_tokens = 1024
+
+# Available models:
+# - "meta/llama-3.1-8b-instruct"
+# - "meta/llama-3.1-70b-instruct"
+# - "google/gemma-2-9b-it"
+# - "google/gemma-2-27b-it"
+# - "mistralai/mixtral-8x7b-instruct"
+# - "microsoft/phi-3-mini-128k-instruct"
+
+[tts]
+default_provider = "GoogleCloud"  # GoogleCloud, ElevenLabs, Azure, OpenAITts, Local
+default_language = "he-IL"
+cache_dir = "./tts_cache"
+max_audio_size_mb = 10
+
+[tts.api_keys]
+# Uncomment and add your API keys:
+# google_cloud = "YOUR_GOOGLE_CLOUD_API_KEY"
+# elevenlabs = "YOUR_ELEVENLABS_API_KEY"
+# azure = "YOUR_AZURE_SPEECH_KEY"
+# openai = "YOUR_OPENAI_API_KEY"
+
+[tts.voices]
+# Default voice configurations
+hebrew_female = "he-IL-Standard-A"
+hebrew_male = "he-IL-Standard-B"
+english_female = "en-US-Standard-A"
+english_male = "en-US-Standard-B"
+
+[skills]
+skills_dir = "./data/skills"
+templates_dir = "./data/skill_templates"
+instances_dir = "./data/skill_instances"
+
+# Built-in skill templates
+[skills.templates]
+# Daily Sales Report
+daily_sales_report = { enabled = true }
+# Support Ticket Alert
+support_ticket_alert = { enabled = true }
+# Inventory Low Alert
+inventory_alert = { enabled = true }
+# Monthly Analytics
+monthly_analytics = { enabled = true }
+
+[hebrew]
+default_language = "he"
+rtl_enabled = true
+hebrew_threshold = 30.0
+hebrew_calendar = false
+
+[database]
+# SQLite for simplicity
+url = "sqlite:./data/calclaw.db"
+
+# PostgreSQL for production
+# url = "postgresql://username:password@localhost/calclaw"
+
+[telegram]
+enabled = false  # Set to true when you create a separate bot
+token = ""  # Different from OpenClaw's bot!
+webhook_url = ""
+
+[whatsapp]
+enabled = false
+business_account_id = ""
+access_token = ""
+
+[integrations.monday]
+enabled = false
+api_key = ""
+
+[integrations.salesforce]
+enabled = false
+client_id = ""
+client_secret = ""
+
+[integrations.servicenow]
+enabled = false
+instance = ""
+username = ""
+
+[integrations.google_sheets]
+enabled = false
+credentials_file = ""
+
+[security]
+jwt_secret = "change-this-to-a-strong-secret-in-production"
+session_timeout_hours = 24
+password_min_length = 8
+
+[roles]
+departments = ["IT", "Sales", "Marketing", "HR", "Finance", "Operations", "Support"]
+
+[logging]
+file = "./logs/calclaw.log"
+max_size_mb = 100
+backup_count = 5
+
+[monitoring]
+enabled = true
+prometheus_port = 9091
+health_check_interval = 60
+
+# Feature flags
+[features]
+nvidia_ai = true
+tts = true
+skills_system = true
+hebrew_support = true
+data_insights = true
+scheduled_reports = false
+real_time_alerts = false
+multi_tenant = true

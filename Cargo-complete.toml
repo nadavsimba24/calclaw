@@ -1,0 +1,58 @@
+[package]
+name = "calclaw"
+version = "0.1.0"
+edition = "2021"
+description = "Enterprise AI Assistant with Hebrew Support, NVIDIA AI, TTS, and Organizational Skills System"
+license = "MIT OR Apache-2.0"
+authors = ["Erez <erez@example.com>"]
+repository = ""
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tokio = { version = "1.0", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
+
+# JSON handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Configuration
+config = "0.13"
+toml = "0.8"
+
+# Database (SQLite for simplicity)
+rusqlite = { version = "0.30", features = ["bundled"] }
+
+# Authentication
+jsonwebtoken = "9.0"
+
+# HTTP client for integrations (with rustls to avoid OpenSSL)
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+
+# Hebrew text processing
+unicode-bidi = "0.3"  # For RTL support
+whatlang = "0.16"     # Language detection
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Utilities
+anyhow = "1.0"
+thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+base64 = "0.21"
+
+# File system operations
+tokio = { version = "1.0", features = ["full"] }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

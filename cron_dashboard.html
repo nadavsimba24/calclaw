@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦾 Calclaw - ניהול Cron Jobs</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 30px;
+            gap: 30px;
+        }
+        
+        .jobs-list {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .job-form {
+            flex: 1;
+            min-width: 300px;
+            background: #fff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
+        }
+        
+        .job-item {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #4CAF50;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .job-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .job-item.disabled {
+            border-left-color: #e74c3c;
+            opacity: 0.7;
+        }
+        
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .job-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .job-schedule {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .job-description {
+            color: #666;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        
+        .job-command {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        .job-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-run {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-toggle {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            width: 100%;
+        }
+        
+        .schedule-help {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .help-title {
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .help-examples {
+            font-family: monospace;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .empty-state i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+        
+        .cron-preview {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.9em;
+            display: none;
+        }
+        
+        .cron-preview.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🦾 Calclaw Cron Manager</h1>
+            <div class="subtitle">ניהול משימות מתוזמנות אוטומטיות</div>
+        </header>
+        
+        <div class="status" id="statusMessage"></div>
+        
+        <div class="main-content">
+            <div class="jobs-list">
+                <h2>📋 Cron Jobs פעילים</h2>
+                <div id="jobsContainer">
+                    <div class="empty-state" id="emptyState">
+                        <div>📭</div>
+                        <h3>אין cron jobs</h3>
+                        <p>הוסף cron job ראשון באמצעות הטופס</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="job-form">
+                <h2>➕ הוסף Cron Job חדש</h2>
+                <form id="cronForm">
+                    <div class="form-group">
+                        <label for="jobName">שם המשימה:</label>
+                        <input type="text" id="jobName" placeholder="לדוגמה: גיבוי יומי" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="jobSchedule">לוח זמנים (Cron Syntax):</label>
+                        <input type="text" id="jobSchedule" placeholder="לדוגמה: 0 2 * * *" required>
+                        <div class="cron-preview" id="cronPreview"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="jobCommand">פקודה להרצה:</label>
+                        <textarea id="jobCommand" rows="4" placeholder="לדוגמה: /home/erez/backup.sh" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="jobDescription">תיאור (אופציונלי):</label>
+                        <textarea id="jobDescription" rows="2" placeholder="תיאור קצר של המשימה"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        ➕ הוסף Cron Job
+                    </button>
+                </form>
+                
+                <div class="schedule-help">
+                    <div class="help-title">❓ עזרה בלוח זמנים (Cron Syntax):</div>
+                    <p>פורמט: <code>דקה שעה יום-בחודש חודש יום-בשבוע</code></p>
+                    <div class="help-examples">
+                        <div>כל שעה: <code>0 * * * *</code></div>
+                        <div>כל יום ב-2 בלילה: <code>0 2 * * *</code></div>
+                        <div>כל יום ראשון ב-3 בלילה: <code>0 3 * * 0</code></div>
+                        <div>כל 5 דקות: <code>*/5 * * * *</code></div>
+                        <div>כל יום עבודה ב-9 בבוקר: <code>0 9 * * 1-5</code></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API endpoint (בגרסה אמיתית זה יהיה שרת אמיתי)
+        const API_BASE = 'http://localhost:3000/api/cron';
+        
+        // מצב אפליקציה
+        let jobs = [];
+        
+        // DOM elements
+        const jobsContainer = document.getElementById('jobsContainer');
+        const emptyState = document.getElementById('emptyState');
+        const cronForm = document.getElementById('cronForm');
+        const statusMessage = document.getElementById('statusMessage');
+        const cronSchedule = document.getElementById('jobSchedule');
+        const cronPreview = document.getElementById('cronPreview');
+        
+        // פונקציות עזר
+        function showStatus(message, type = 'success') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status ${type}`;
+            setTimeout(() => {
+                statusMessage.className = 'status';
+            }, 5000);
+        }
+        
+        function formatCronPreview(schedule) {
+            const parts = schedule.trim().split(/\s+/);
+            if (parts.length >= 5) {
+                const [minute, hour, day, month, weekday] = parts;
+                
+                let preview = '';
+                if (minute !== '*') preview += `דקה ${minute}, `;
+                if (hour !== '*') preview += `שעה ${hour}, `;
+                if (day !== '*') preview += `יום ${day}, `;
+                if (month !== '*') preview += `חודש ${month}, `;
+                if (weekday !== '*') preview += `יום בשבוע ${weekday}`;
+                
+                return preview || 'כל הזמן';
+            }
+            return 'פורמט לא תקין';
+        }
+        
+        // טען jobs
+        async function loadJobs() {
+            try {
+                // בגרסה אמיתית: const response = await fetch(`${API_BASE}/jobs`);
+                // jobs = await response.json();
+                
+                // הדמיית נתונים
+                jobs = [
+                    {
+                        id: 1,
+                        name: "גיבוי יומי",
+                        schedule: "0 2 * * *",
+                        command: "/home/erez/backup.sh",
+                        description: "גיבוי של כל הקבצים החשובים",
+                        enabled: true,
+                        created: "2026-04-06T20:00:00"
+                    },
+                    {
+                        id: 2,
+                        name: "ניקוי לוגים",
+                        schedule: "0 0 * * 0",
+                        command: "find /var/log -name '*.log' -mtime +7 -delete",
+                        description: "ניקוי לוגים ישנים",
+                        enabled: true,
+                        created: "2026-04-06T20:00:00"
+                    },
+                    {
+                        id: 3,
+                        name: "בדיקת מערכת",
+                        schedule: "*/30 * * * *",
+                        command: "/home/erez/check_system.sh",
+                        description: "בדיקת סטטוס מערכת כל 30 דקות",
+                        enabled: false,
+                        created: "2026-04-06T20:00:00"
+                    }
+                ];
+                
+                renderJobs();
+            } catch (error) {
+                showStatus('שגיאה בטעינת jobs: ' + error.message, 'error');
+            }
+        }
+        
+        // הצג jobs
+        function renderJobs() {
+            if (jobs.length === 0) {
+                emptyState.style.display = 'block';
+                jobsContainer.innerHTML = '';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            const jobsHTML = jobs.map(job => `
+                <div class="job-item ${job.enabled ? '' : 'disabled'}">
+                    <div class="job-header">
+                        <div class="job-name">${job.name}</div>
+                        <div class="job-schedule">${job.schedule}</div>
+                    </div>
+                    
+                    ${job.description ? `<div class="job-description">${job.description}</div>` : ''}
+                    
+                    <div class="job-command">${job.command}</div>
+                    
+                    <div class="job-meta">
+                        <small>נוצר: ${new Date(job.created).toLocaleDateString('he-IL')}</small>
+                    </div>
+                    
+                    <div class="job-actions">
+                        <button class="btn btn-run" onclick="runJob(${job.id})">
+                            🚀 הרץ עכשיו
+                        </button>
+                        <button class="btn btn-toggle" onclick="toggleJob(${job.id})">
+                            ${job.enabled ? '❌ כבה' : '✅ הפעל'}
+                        </button>
+                        <button class="btn btn-delete" onclick="deleteJob(${job.id})">
+                            🗑️ מחק
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            jobsContainer.innerHTML = jobsHTML;
+        }
+        
+        // הוסף job חדש
+        async function addJob(event) {
+            event.preventDefault();
+            
+            const jobData = {
+                name: document.getElementById('jobName').value,
+                schedule: document.getElementById('jobSchedule').value,
+                command: document.getElementById('jobCommand').value,
+                description: document.getElementById('jobDescription').value
+            };
+            
+            try {
+                // בגרסה אמיתית:
+                // const response = await fetch(`${API_BASE}/jobs`, {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify(jobData)
+                // });
+                
+                // הדמיית הוספה
+                const newJob = {
+                    id: jobs.length + 1,
+                    ...jobData,
+                    enabled: true,
+                    created: new Date().toISOString()
+                };
+                
+                jobs.push(newJob);
+                renderJobs();
+                
+                // נקה טופס
+                cronForm.reset();
+                cronPreview.classList.remove('show');
+                
+                showStatus(`✅ נוסף cron job: ${jobData.name}`);
+            } catch (error) {
+                showStatus('שגיאה בהוספת job: ' + error.message, 'error');
+            }
+        }
+        
+        // הרץ job עכשיו
+        async function runJob(jobId) {
+            try {
+                // בגרסה אמיתית:
+                // const response = await fetch(`${API_BASE}/jobs/${jobId}/run`, { method: 'POST' });
+                
+                showStatus(`🚀 מריץ job #${jobId}...`);
+                
+                // הדמיית הרצה
+                setTimeout(() => {
+                    showStatus(`✅ Job #${jobId} הורץ בהצלחה`);
+                }, 1000);
+            } catch (error) {
+                showStatus('שגיאה בהרצת job: ' + error.message, 'error');
+            }
+        }
+        
+        // הפעל/כבה job
+        async function toggleJob(jobId) {
+            try {
+                // בגרסה אמיתית:
+                // const response = await fetch(`${        // הפעל/כבה job
+        async function toggleJob(jobId) {
+            try {
+                // בגרסה אמיתית:
+                // const response = await fetch(`${API_BASE}/jobs/${jobId}/toggle`, { method: 'POST' });
+                
+                // הדמיית toggle
+                const job = jobs.find(j => j.id === jobId);
+                if (job) {
+                    job.enabled = !job.enabled;
+                    renderJobs();
+                    showStatus(`Job #${jobId} ${job.enabled ? 'הופעל' : 'כובה'}`);
+                }
+            } catch (error) {
+                showStatus('שגיאה בשינוי סטטוס job: ' + error.message, 'error');
+            }
+        }
+        
+        // מחק job
+        async function deleteJob(jobId) {
+            if (!confirm('האם למחוק את ה-cron job הזה?')) return;
+            
+            try {
+                // בגרסה אמיתית:
+                // const response = await fetch(`${API_BASE}/jobs/${jobId}`, { method: 'DELETE' });
+                
+                // הדמיית מחיקה
+                jobs = jobs.filter(j => j.id !== jobId);
+                renderJobs();
+                showStatus(`🗑️ נמחק cron job #${jobId}`);
+            } catch (error) {
+                showStatus('שגיאה במחיקת job: ' + error.message, 'error');
+            }
+        }
+        
+        // הצג תצוגה מקדימה של cron
+        cronSchedule.addEventListener('input', function() {
+            const schedule = this.value.trim();
+            if (schedule && schedule.split(/\s+/).length >= 5) {
+                cronPreview.textContent = `מתוזמן לרוץ: ${formatCronPreview(schedule)}`;
+                cronPreview.classList.add('show');
+            } else {
+                cronPreview.classList.remove('show');
+            }
+        });
+        
+        // אתחול
+        cronForm.addEventListener('submit', addJob);
+        loadJobs();
+    </script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+# 🏢 Calclaw Enterprise - Docker Image
+# Production-ready image with security features
+
+# Stage 1: Builder with security scanning
+FROM rust:1.75-bookworm AS builder
+
+# Install build dependencies and security tools
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    git \
+    curl \
+    clang \
+    lld \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Security: Run cargo audit before building
+RUN cargo install cargo-audit && \
+    cargo audit
+
+# Build with security flags
+RUN RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-fuse-ld=lld" \
+    cargo build --release \
+    --target x86_64-unknown-linux-gnu \
+    --locked
+
+# Stage 2: Security scanner
+FROM aquasec/trivy:latest AS scanner
+COPY --from=builder /app/target/x86_64-unknown-linux-gnu/release/calclaw /calclaw
+RUN trivy filesystem --severity HIGH,CRITICAL --no-progress /calclaw
+
+# Stage 3: Minimal runtime
+FROM gcr.io/distroless/cc-debian12:nonroot
+
+# Metadata
+LABEL org.opencontainers.image.title="Calclaw Enterprise"
+LABEL org.opencontainers.image.description="Enterprise AI Assistant with Security Features"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/calclaw/calclaw"
+
+# Copy binary from builder
+COPY --from=builder --chown=nonroot:nonroot \
+    /app/target/x86_64-unknown-linux-gnu/release/calclaw /usr/local/bin/calclaw
+
+# Copy default configuration
+COPY --chown=nonroot:nonroot config/enterprise/ /app/config/
+
+# Create necessary directories
+RUN mkdir -p /app/data /app/logs /app/tmp && \
+    chown -R nonroot:nonroot /app
+
+# Switch to non-root user
+USER nonroot
+
+# Health checks
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD ["/usr/local/bin/calclaw", "health"]
+
+# Security: Read-only root filesystem
+# RUN find / -type f -perm /u+s -exec chmod u-s {} \; && \
+#     find / -type f -perm /g+s -exec chmod g-s {} \;
+
+# Security: Drop capabilities
+# RUN setcap -r /usr/local/bin/calclaw
+
+# Expose port
+EXPOSE 3000
+
+# Environment variables
+ENV RUST_LOG=warn
+ENV PORT=3000
+ENV HOST=0.0.0.0
+ENV CONFIG_DIR=/app/config
+ENV DATA_DIR=/app/data
+ENV LOG_DIR=/app/logs
+ENV TMP_DIR=/app/tmp
+
+# Security: Run with minimal privileges
+# RUN chmod 755 /usr/local/bin/calclaw && \
+#     chown root:root /usr/local/bin/calclaw
+
+# Run the application
+ENTRYPOINT ["/usr/local/bin/calclaw"]
+
+# Default command
+CMD ["--config", "/app/config/install_config.json"]

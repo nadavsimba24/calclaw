@@ -1,0 +1,351 @@
+version: '3.8'
+
+services:
+  # Calclaw Enterprise - Main service
+  calclaw-enterprise:
+    build:
+      context: .
+      dockerfile: Dockerfile.enterprise
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: calclaw/enterprise:${TAG:-latest}
+    container_name: calclaw-enterprise
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - RUST_LOG=${RUST_LOG:-warn}
+      - NODE_ENV=production
+      - CONFIG_DIR=/app/config
+      - DATA_DIR=/app/data
+      - LOG_DIR=/app/logs
+      - TMP_DIR=/app/tmp
+      - OLLAMA_URL=http://ollama:11434
+      - DATABASE_URL=postgres://${DB_USER:-calclaw}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-calclaw}
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - .env.enterprise
+    volumes:
+      - enterprise_data:/app/data
+      - enterprise_logs:/app/logs
+      - enterprise_tmp:/app/tmp
+      - ./config/enterprise:/app/config:ro
+      - ./scripts:/app/scripts:ro
+    secrets:
+      - db_password
+      - redis_password
+      - jwt_secret
+    healthcheck:
+      test: ["CMD", "calclaw", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - enterprise-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calclaw-enterprise.rule=Host(`${DOMAIN:-calclaw.local}`)"
+      - "traefik.http.services.calclaw-enterprise.loadbalancer.server.port=3000"
+      - "traefik.http.routers.calclaw-enterprise.tls=true"
+      - "traefik.http.routers.calclaw-enterprise.tls.certresolver=letsencrypt"
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=3000"
+      - "prometheus.io/path=/metrics"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      replicas: ${REPLICAS:-2}
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Ollama Enterprise - AI models with persistence
+  ollama-enterprise:
+    image: ollama/ollama:latest
+    container_name: ollama-enterprise
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_NUM_PARALLEL=4
+      - OLLAMA_MAX_LOADED_MODELS=3
+    volumes:
+      - ollama_enterprise_models:/root/.ollama
+      - ./config/ollama/models:/models:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - enterprise-network
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+          cpus: '4'
+        reservations:
+          memory: 8G
+          cpus: '2'
+      placement:
+        constraints:
+          - node.role == manager
+
+  # PostgreSQL Enterprise - High availability
+  postgres-enterprise:
+    image: postgres:15-alpine
+    container_name: postgres-enterprise
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-calclaw}
+      - POSTGRES_USER=${DB_USER:-calclaw}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_enterprise_data:/var/lib/postgresql/data
+      - ./scripts/init-db-enterprise.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./config/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-calclaw}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - enterprise-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+      placement:
+        constraints:
+          - node.role == manager
+
+  # Redis Enterprise - Cluster mode
+  redis-enterprise:
+    image: redis:7-alpine
+    container_name: redis-enterprise
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --requirepass file:/run/secrets/redis_password
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_enterprise_data:/data
+      - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    secrets:
+      - redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$$(cat /run/secrets/redis_password)", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - enterprise-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  # Traefik Enterprise - With Let's Encrypt
+  traefik-enterprise:
+    image: traefik:v3.0
+    container_name: traefik-enterprise
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_enterprise_certs:/letsencrypt
+      - ./config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./config/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    environment:
+      - ACME_EMAIL=${ACME_EMAIL}
+    networks:
+      - enterprise-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN:-calclaw.local}`)"
+      - "traefik.http.routers.api.service=api@internal"
+      - "traefik.http.routers.api.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_AUTH}"
+
+  # Prometheus Enterprise - Monitoring
+  prometheus-enterprise:
+    image: prom/prometheus:latest
+    container_name: prometheus-enterprise
+    restart: unless-stopped
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_enterprise_data:/prometheus
+      - ./config/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    networks:
+      - enterprise-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+
+  # Grafana Enterprise - Dashboards
+  grafana-enterprise:
+    image: grafana/grafana-enterprise:latest
+    container_name: grafana-enterprise
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-panel
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN:-calclaw.local}
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana_enterprise_data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./config/grafana/plugins:/var/lib/grafana/plugins:ro
+    ports:
+      - "3001:3000"
+    networks:
+      - enterprise-network
+    depends_on:
+      - prometheus-enterprise
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN:-calclaw.local}`)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+
+  # Alertmanager - Alert routing
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    networks:
+      - enterprise-network
+
+  # Loki - Log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    volumes:
+      - ./config/loki/loki-config.yml:/etc/loki/local-config.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yml
+    ports:
+      - "3100:3100"
+    networks:
+      - enterprise-network
+
+  # Promtail - Log collection
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - ./config/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - enterprise-network
+
+volumes:
+  enterprise_data:
+    driver: local
+  enterprise_logs:
+    driver: local
+  enterprise_tmp:
+    driver: local
+  ollama_enterprise_models:
+    driver: local
+  postgres_enterprise_data:
+    driver: local
+  redis_enterprise_data:
+    driver: local
+  traefik_enterprise_certs:
+    driver: local
+  prometheus_enterprise_data:
+    driver: local
+  grafana_enterprise_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+  loki_data:
+    driver: local
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+
+networks:
+  enterprise-network:
+    driver: overlay
+    attachable: true
+    ipam:
+      config:
+        - subnet: 10.10.0.0/16
+    driver_opts:
+      encrypted: "true"

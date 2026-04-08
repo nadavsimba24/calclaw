@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalcLaw - Ollama Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .hebrew { text-align: right; direction: rtl; }
+        .header { background: #2196F3; color: white; padding: 20px; border-radius: 5px; }
+        .status { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .feature { background: #e3f2fd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .response { background: #f9f9f9; padding: 15px; border-left: 4px solid #4CAF50; margin: 10px 0; }
+        .error { border-left-color: #f44336; }
+        .model-list { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+        .model-card { background: white; border: 1px solid #ddd; border-radius: 5px; padding: 15px; flex: 1; min-width: 200px; }
+        .model-card h4 { margin-top: 0; }
+        .model-size { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 CalcLaw - Ollama Dashboard</h1>
+        <p>שילוב מודלי AI מקומיים עם CalcLaw</p>
+    </div>
+    
+    <div id="ollama-status" class="status">
+        <h3>בודק סטטוס Ollama...</h3>
+    </div>
+    
+    <div class="feature">
+        <h3>📚 מודלים זמינים</h3>
+        <div id="models-list" class="model-list">
+            <div class="model-card">
+                <h4>Phi3 Mini</h4>
+                <p class="model-size">2.2 GB</p>
+                <p>קל ומהיר, טוב לקוד בסיסי ועברית</p>
+                <button onclick="useModel('phi3:mini')">בחר מודל זה</button>
+            </div>
+            <div class="model-card">
+                <h4>Gemma2:9b</h4>
+                <p class="model-size">5.4 GB</p>
+                <p>חזק, טוב למשימות מורכבות</p>
+                <button onclick="useModel('gemma2:9b')">בחר מודל זה</button>
+            </div>
+            <div class="model-card">
+                <h4>Phi3:3.8b</h4>
+                <p class="model-size">2.2 GB</p>
+                <p>כללי, טוב למשימות מגוונות</p>
+                <button onclick="useModel('phi3:3.8b')">בחר מודל זה</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="feature">
+        <h3>🤖 יצירת טקסט עם AI מקומי</h3>
+        <div class="form-group">
+            <label for="model">מודל:</label>
+            <select id="model">
+                <option value="phi3:mini">Phi3 Mini (2.2GB) - קל ומהיר</option>
+                <option value="gemma2:9b">Gemma2:9b (5.4GB) - חזק</option>
+                <option value="phi3:3.8b">Phi3:3.8b (2.2GB) - כללי</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="task-type">סוג משימה:</label>
+            <select id="task-type" onchange="toggleLanguageField()">
+                <option value="general">כללי</option>
+                <option value="hebrew">עברית</option>
+                <option value="code">קוד</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="language-field" style="display: none;">
+            <label for="language">שפת תכנות:</label>
+            <input type="text" id="language" value="Python" placeholder="Python, JavaScript, Rust, etc.">
+        </div>
+        
+        <div class="form-group">
+            <label for="prompt">פקודה:</label>
+            <textarea id="prompt" rows="4" placeholder="מה תרצה ליצור?"></textarea>
+        </div>
+        
+        <button onclick="generateText()">🚀 צור טקסט</button>
+    </div>
+    
+    <div id="generation-response" class="response">
+        <!-- Response will appear here -->
+    </div>
+    
+    <div class="feature">
+        <h3>🔗 שימוש ישיר עם cURL</h3>
+        <div class="hebrew">
+            <p><strong>בדיקת סטטוס:</strong></p>
+            <pre>curl http://localhost:11434/api/tags</pre>
+            
+            <p><strong>יצירת טקסט:</strong></p>
+            <pre>curl -X POST http://localhost:11434/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "phi3:mini",
+    "prompt": "שלום עולם",
+    "stream": false
+  }'</pre>
+            
+            <p><strong>יצירת קוד:</strong></p>
+            <pre>curl -X POST http://localhost:11434/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "phi3:mini",
+    "prompt": "Write Python function to calculate fibonacci",
+    "stream": false
+  }'</pre>
+        </div>
+    </div>
+    
+    <script>
+        // Check Ollama status on page load
+        async function checkOllamaStatus() {
+            const statusDiv = document.getElementById('ollama-status');
+            
+            try {
+                const response = await fetch('http://localhost:11434/api/tags');
+                if (response.ok) {
+                    const data = await response.json();
+                    statusDiv.innerHTML = `
+                        <h3>✅ Ollama פועל</h3>
+                        <p>📊 מספר מודלים: ${data.models.length}</p>
+                        <p>🤖 מודלים זמינים: ${data.models.map(m => m.name).join(', ')}</p>
+                    `;
+                    statusDiv.style.background = '#e8f5e9';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <h3>❌ Ollama לא פועל</h3>
+                    <p>אנא ודא ש-Ollama רץ על localhost:11434</p>
+                    <p>הפעל עם: <code>ollama serve</code></p>
+                    <p>שגיאה: ${error.message}</p>
+                `;
+                statusDiv.style.background = '#ffebee';
+            }
+        }
+        
+        // Use a specific model
+        function useModel(modelName) {
+            document.getElementById('model').value = modelName;
+            alert(`מודל ${modelName} נבחר`);
+        }
+        
+        // Toggle language field for code tasks
+        function toggleLanguageField() {
+            const taskType = document.getElementById('task-type').value;
+            const languageField = document.getElementById('language-field');
+            languageField.style.display = taskType === 'code' ? 'block' : 'none';
+        }
+        
+        // Generate text using Ollama
+        async function generateText() {
+            const model = document.getElementById('model').value;
+            const prompt = document.getElementById('prompt').value;
+            const taskType = document.getElementById('task-type').value;
+            const language = document.getElementById('language').value;
+            
+            const responseDiv = document.getElementById('generation-response');
+            responseDiv.innerHTML = '<p>⚡ מעבד... זה עשוי לקחת כמה שניות</p>';
+            
+            // Prepare prompt based on task type
+            let finalPrompt = prompt;
+            if (taskType === 'hebrew') {
+                finalPrompt = `${prompt} תשובה בעברית בבקשה.`;
+            } else if (taskType === 'code') {
+                finalPrompt = `Write ${language} code for: ${prompt}`;
+            }
+            
+            // Create request data
+            const requestData = {
+                model: model,
+                prompt: finalPrompt,
+                stream: false,
+                options: {
+                    temperature: 0.7,
+                    top_p: 0.9,
+                    top_k: 40,
+                    num_predict: 512
+                }
+            };
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const processingTime = Date.now() - startTime;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Process response for Hebrew RTL
+                    let responseText = data.response;
+                    if (taskType === 'hebrew' && containsHebrew(responseText)) {
+                        responseText = `\u202B${responseText}\u202C`;
+                    }
+                    
+                    responseDiv.innerHTML = `
+                        <h3>✅ תשובה:</h3>
+                        <p><strong>מודל:</strong> ${model}</p>
+                        <p><strong>זמן עיבוד:</strong> ${processingTime} ms</p>
+                        <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px; font-family: monospace; white-space: pre-wrap;">
+                            ${escapeHtml(responseText)}
+                        </div>
+                    `;
+                    responseDiv.className = 'response';
+                } else {
+                    const errorText = await response.text();
+                    responseDiv.innerHTML = `<p class="error">❌ שגיאה: HTTP ${response.status} - ${errorText}</p>`;
+                    responseDiv.className = 'response error';
+                }
+            } catch (error) {
+                responseDiv.innerHTML = `<p class="error">❌ שגיאת רשת: ${error.message}</p>`;
+                responseDiv.className = 'response error';
+            }
+        }
+        
+        // Helper function to check if text contains Hebrew
+        function containsHebrew(text) {
+            return /[\u0590-\u05FF]/.test(text);
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkOllamaStatus();
+        });
+    </script>
+</body>
+</html>

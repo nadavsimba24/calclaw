@@ -1,0 +1,103 @@
+# CalcLaw Configuration Example
+# Copy to config.toml and modify as needed
+
+[server]
+port = 3000
+host = "0.0.0.0"  # Bind to all interfaces
+log_level = "info"
+
+[database]
+# SQLite (default, for simplicity)
+url = "sqlite:data/calclaw.db"
+
+# PostgreSQL (for production)
+# url = "postgresql://username:password@localhost/calclaw"
+
+[telegram]
+enabled = true
+token = "YOUR_TELEGRAM_BOT_TOKEN"
+webhook_url = ""  # Leave empty for polling
+
+[whatsapp]
+enabled = false
+business_account_id = ""
+access_token = ""
+webhook_verify_token = ""
+
+[integrations.monday]
+enabled = false
+api_key = ""
+api_url = "https://api.monday.com/v2"
+
+[integrations.salesforce]
+enabled = false
+client_id = ""
+client_secret = ""
+username = ""
+password = ""
+security_token = ""
+instance_url = ""
+
+[integrations.servicenow]
+enabled = false
+instance = "your-instance.service-now.com"
+username = ""
+password = ""
+
+[integrations.google_sheets]
+enabled = false
+credentials_file = "credentials.json"
+spreadsheet_id = ""
+
+[integrations.ftp]
+enabled = false
+host = ""
+port = 21
+username = ""
+password = ""
+directory = "/"
+
+[security]
+jwt_secret = "change-this-to-a-random-secret-key"
+session_timeout_hours = 24
+password_min_length = 8
+
+[hebrew]
+default_language = "he"
+rtl_enabled = true
+hebrew_calendar = false  # Enable for Hebrew dates
+
+[roles]
+# Department mappings
+departments = ["IT", "Sales", "Marketing", "HR", "Finance", "Operations"]
+
+# Default permissions
+default_permissions = ["read_own_data", "send_messages"]
+
+# Admin permissions (all access)
+admin_permissions = ["*"]
+
+# Superuser permissions (department-level)
+superuser_permissions = [
+    "read_department_data",
+    "manage_department_users",
+    "generate_reports",
+    "configure_integrations"
+]
+
+[logging]
+file = "calclaw.log"
+max_size_mb = 100
+backup_count = 5
+
+[monitoring]
+enabled = true
+prometheus_port = 9091
+health_check_interval = 60
+
+# Feature flags
+[features]
+data_insights = true
+scheduled_reports = false
+real_time_alerts = false
+multi_tenant = false

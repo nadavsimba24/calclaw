@@ -1,0 +1,56 @@
+# CalcLaw NVIDIA Configuration
+# Use your NVIDIA API key: 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
+
+[server]
+port = 3000
+host = "127.0.0.1"
+log_level = "info"
+
+[nvidia]
+# Your NVIDIA API key from https://build.nvidia.com/
+api_key = "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"
+base_url = "https://integrate.api.nvidia.com/v1"
+model = "meta/llama-3.1-8b-instruct"
+temperature = 0.7
+max_tokens = 1024
+
+# Alternative models you can use:
+# - "meta/llama-3.1-70b-instruct" (larger, more capable)
+# - "google/gemma-2-9b-it" (good for multilingual)
+# - "google/gemma-2-27b-it" (even better)
+# - "mistralai/mixtral-8x7b-instruct" (excellent for coding)
+# - "microsoft/phi-3-mini-128k-instruct" (fast, efficient)
+
+[hebrew]
+default_language = "he"
+rtl_enabled = true
+hebrew_threshold = 30.0  # Percentage to consider text as Hebrew
+
+[database]
+# SQLite for simplicity
+url = "sqlite:calclaw.db"
+
+# PostgreSQL for production
+# url = "postgresql://username:password@localhost/calclaw"
+
+[telegram]
+enabled = false  # Set to true when you create a separate bot
+token = ""  # Different from OpenClaw's bot!
+webhook_url = ""
+
+# Other integrations (to be implemented)
+[integrations.monday]
+enabled = false
+
+[integrations.salesforce]
+enabled = false
+
+[integrations.servicenow]
+enabled = false
+
+[integrations.google_sheets]
+enabled = false
+
+[security]
+jwt_secret = "change-this-in-production"
+session_timeout_hours = 24

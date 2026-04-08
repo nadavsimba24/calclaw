@@ -1,0 +1,24 @@
+[Unit]
+Description=CalcLaw Complete - Enterprise AI Assistant
+After=network.target
+
+[Service]
+Type=simple
+User=erez
+WorkingDirectory=/home/erez/.openclaw/workspace/calclaw
+ExecStart=/home/erez/.openclaw/workspace/calclaw/target/release/calclaw
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=calclaw
+Environment=RUST_LOG=info
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/erez/.openclaw/workspace/calclaw/data
+
+[Install]
+WantedBy=multi-user.target
