@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calclaw - AI Assistant Framework</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            padding: 4rem 0;
+        }
+        
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+        
+        .tagline {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+        
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+        
+        .badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .cta-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 4rem;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .features {
+            background: white;
+            border-radius: 20px;
+            padding: 4rem 2rem;
+            margin-top: -2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .feature-desc {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature-list {
+            list-style: none;
+        }
+        
+        .feature-list li {
+            padding: 0.5rem 0;
+            color: #555;
+        }
+        
+        .feature-list li:before {
+            content: "✓";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .installation {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .code-block .comment {
+            color: #6a9955;
+        }
+        
+        .code-block .keyword {
+            color: #569cd6;
+        }
+        
+        .code-block .string {
+            color: #ce9178;
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .plan {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .plan:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+        
+        .plan-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .plan-title {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .plan-price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .plan-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+        
+        .plan-features li {
+            padding: 0.5rem 0;
+            color: #666;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            color: white;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 4rem;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+        
+        .footer-links a:hover {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .logo {
+                font-size: 3rem;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🦾</div>
+            <h1>Calclaw</h1>
+            <p class="tagline">AI Assistant Framework for personal and enterprise use</p>
+            
+            <div class="badges">
+                <span class="badge">🚀 v1.0.0</span>
+                <span class="badge">🔒 MIT License</span>
+                <span class="badge">🦀 Built with Rust</span>
+                <span class="badge">🐳 Docker Ready</span>
+                <span class="badge">📖 Full Documentation</span>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="https://github.com/nadavsimba24/calclaw" class="btn btn-primary">
+                    <i class="fab fa-github"></i> View on GitHub
+                </a>
+                <a href="#installation" class="btn btn-secondary">
+                    <i class="fas fa-rocket"></i> Get Started
+                </a>
+            </div>
+        </header>
+        
+        <section class="features">
+            <h2 class="section-title">✨ Features</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🏠</div>
+                    <h3 class="feature-title">Personal Edition</h3>
+                    <p class="feature-desc">Perfect for individual use, development, and testing</p>
+                    <ul class="feature-list">
+                        <li>Local AI with Ollama</li>
+                        <li>Hebrew NLP with RTL support</li>
+                        <li>Voice TTS with eSpeak NG</li>
+                        <li>Telegram Bot integration</li>
+                        <li>Fast & completely private</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🏢</div>
+                    <h3 class="feature-title">Enterprise Edition</h3>
+                    <p class="feature-desc">For teams and organizations with security needs</p>
+                    <ul class="feature-list">
+                        <li>MCP Proxy with approvals</li>
+                        <li>Multi-tenant architecture</li>
+                        <li>Slack & GitHub integration</li>
+                        <li>Prometheus & Grafana monitoring</li>
+                        <li>Docker & Kubernetes ready</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🏛️</div>
+                    <h3 class="feature-title">Claw Organ</h3>
+                    <p class="feature-desc">Advanced enterprise with Kubernetes sandbox</p>
+                    <ul class="feature-list">
+                        <li>Remote sandbox on Kubernetes</li>
+                        <li>Approval workflows via Slack</li>
+                        <li>OAuth 2.0 permissions only</li>
+                        <li>Single Source of Truth</li>
+                        <li>Network policies with zero-trust</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div id="installation" class="installation">
+                <h2 class="section-title">🚀 Quick Start</h2>
+                
+                <h3>Smart Installation (Recommended)</h3>
+                <div class="code-block">
+                    <span class="comment"># Clone the repository</span><br>
+                    <span class="keyword">git</span> clone https://github.com/nadavsimba24/calclaw.git<br>
+                    <span class="keyword">cd</span> calclaw<br><br>
+                    <span class="comment"># Run smart installer with questionnaire</span><br>
+                    chmod +x scripts/install_smart.sh<br>
+                    ./scripts/install_smart.sh
+                </div>
+                
+                <h3>With Docker</h3>
+                <div class="code-block">
+                    <span class="comment"># Build and run with Docker</span><br>
+                    ./scripts/build_docker.sh<br>
+                    ./scripts/run_with_docker.sh
+                </div>
+            </div>
+            
+            <h2 class="section-title">📊 Choose Your Edition</h2>
+            <div class="comparison">
+                <div class="plan">
+                    <div class="plan-icon">🏠</div>
+                    <h3 class="plan-title">Personal</h3>
+                    <div class="plan-price">Free</div>
+                    <ul class="plan-features">
+                        <li>Local installation</li>
+                        <li>Full access</li>
+                        <li>Fast & simple</li>
+                        <li>Perfect for testing</li>
+                        <li>No infrastructure needed</li>
+                    </ul>
+                    <a href="https://github.com/nadavsimba24/calclaw/blob/main/docs/INSTALL_SMART.md#personal-edition" class="btn btn-primary">Get Started</a>
+                </div>
+                
+                <div class="plan">
+                    <div class="plan-icon">🏢</div>
+                    <h3 class="plan-title">Enterprise</h3>
+                    <div class="plan-price">Custom</div>
+                    <ul class="plan-features">
+                        <li>Advanced security</li>
+                        <li>Multi-user support</li>
+                        <li>Full integrations</li>
+                        <li>Monitoring & alerts</li>
+                        <li>Production ready</li>
+                    </ul>
+                    <a href="https://github.com/nadavsimba24/calclaw/blob/main/docs/ENTERPRISE_GUIDE.md" class="btn btn-primary">Learn More</a>
+                </div>
+                
+                <div class="plan">
+                    <div class="plan-icon">🏛️</div>
+                    <h3 class="plan-title">Claw Organ</h3>
+                    <div class="plan-price">Enterprise+</div>
+                    <ul class="plan-features">
+                        <li>Kubernetes sandbox</li>
+                        <li>Approval workflows</li>
+                        <li>OAuth 2.0 only</li>
+                        <li>Zero-trust network</li>
+                        <li>Large scale</li>
+                    </ul>
+                    <a href="https://github.com/nadavsimba24/calclaw#claw-organ-advanced-enterprise" class="btn btn-primary">Explore</a>
+                </div>
+            </div>
+        </section>
+        
+        <footer>
+            <h2>Calclaw - AI Assistant Framework</h2>
+            <p>Open source project built with ❤️ for the community</p>
+            
+            <div class="footer-links">
+                <a href="https://github.com/nadavsimba24/calclaw">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+                <a href="https://github.com/nadavsimba24/calclaw/issues">
+                    <i class="fas fa-bug"></i> Issues
+                </a>
+                <a href="https://github.com/nadavsimba24/calclaw/releases">
+                    <i class="fas fa-tag"></i> Releases
+                </a>
+                <a href="https://github.com/nadavsimba24/calclaw/blob/main/LICENSE">
+                    <i class="fas fa-balance-scale"></i> License
+                </a>
+                <a href="mailto:support@calclaw.com">
+                    <i class="fas fa-envelope"></i> Contact
+                </a>
+            </div>
+            
+            <p>&copy; 2026 Calclaw Team. All rights reserved.</p>
+            <p>Made with 🦀 Rust, 🐳 Docker, and ☕ coffee</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Add animation to feature cards on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.feature-card, .plan').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
