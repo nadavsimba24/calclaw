@@ -1,0 +1,478 @@
+                    </div>
+                    <div class="task-list" id="capabilitiesList">
+                        <div class="loading">Loading capabilities...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="charts-container">
+            <!-- Performance Chart Card -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Performance History</h3>
+                    <button class="btn btn-secondary" onclick="refreshCharts()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="chart">
+                    <div class="chart-placeholder" id="performanceChart">
+                        Performance chart will appear here
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Health Status Chart Card -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>System Health</h3>
+                    <button class="btn btn-secondary" onclick="refreshHealth()">
+                        <i class="fas fa-heartbeat"></i>
+                    </button>
+                </div>
+                <div class="chart">
+                    <div class="chart-placeholder" id="healthChart">
+                        Health chart will appear here
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recommendations Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-lightbulb"></i> Improvement Recommendations</h2>
+                <button class="btn btn-secondary" onclick="refreshRecommendations()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-content">
+                <div class="recommendations" id="recommendationsList">
+                    <div class="loading">Loading recommendations...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Control Panel -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-gamepad"></i> Engine Controls</h2>
+            </div>
+            <div class="card-content">
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="startEngine()">
+                        <i class="fas fa-play"></i> Start Engine
+                    </button>
+                    <button class="btn btn-secondary" onclick="pauseEngine()">
+                        <i class="fas fa-pause"></i> Pause Engine
+                    </button>
+                    <button class="btn btn-secondary" onclick="resumeEngine()">
+                        <i class="fas fa-play"></i> Resume Engine
+                    </button>
+                    <button class="btn btn-danger" onclick="stopEngine()">
+                        <i class="fas fa-stop"></i> Stop Engine
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetEngine()">
+                        <i class="fas fa-redo"></i> Reset Engine
+                    </button>
+                </div>
+                <div class="controls" style="margin-top: 1rem;">
+                    <button class="btn btn-secondary" onclick="triggerHeartbeat()">
+                        <i class="fas fa-heartbeat"></i> Trigger Heartbeat
+                    </button>
+                    <button class="btn btn-secondary" onclick="syncCronJobs()">
+                        <i class="fas fa-sync"></i> Sync Cron Jobs
+                    </button>
+                    <button class="btn btn-secondary" onclick="checkForUpdates()">
+                        <i class="fas fa-download"></i> Check Updates
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast" style="display: none;"></div>
+    
+    <script>
+        const API_BASE = 'http://localhost:3000/api/orchestration';
+        let refreshInterval;
+        
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ️';
+            
+            toast.innerHTML = `${icon} ${message}`;
+            toast.style.display = 'flex';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Fetch data from API
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                showToast(`Failed to fetch data: ${error.message}`, 'error');
+                return null;
+            }
+        }
+        
+        // Update engine status
+        async function updateEngineStatus() {
+            const data = await fetchData('/status');
+            if (!data) return;
+            
+            // Update status indicators
+            document.getElementById('agentStatus').textContent = data.agent_state.status;
+            document.getElementById('heartbeatCount').textContent = data.heartbeat.count;
+            document.getElementById('uptime').textContent = formatUptime(data.performance?.uptime_seconds || 0);
+            document.getElementById('tasksProcessed').textContent = data.tasks?.total || 0;
+            
+            // Update status dot
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const health = data.heartbeat?.health?.toLowerCase() || 'healthy';
+            
+            statusDot.className = 'status-dot ' + health;
+            statusText.textContent = health.charAt(0).toUpperCase() + health.slice(1);
+        }
+        
+        // Update performance metrics
+        async function updatePerformance() {
+            const data = await fetchData('/performance');
+            if (!data) return;
+            
+            const successRate = (data.success_rate * 100).toFixed(1);
+            const efficiency = (data.efficiency_score * 100).toFixed(1);
+            const learning = (data.learning_score * 100).toFixed(1);
+            
+            document.getElementById('successRate').textContent = `${successRate}%`;
+            document.getElementById('efficiencyScore').textContent = data.efficiency_score.toFixed(2);
+            document.getElementById('learningScore').textContent = data.learning_score.toFixed(2);
+            
+            document.getElementById('successRateBar').style.width = `${successRate}%`;
+            document.getElementById('efficiencyBar').style.width = `${efficiency}%`;
+            document.getElementById('learningBar').style.width = `${learning}%`;
+            
+            document.getElementById('tasksProcessed').textContent = data.total_tasks || 0;
+        }
+        
+        // Update task queue
+        async function updateTaskQueue() {
+            const data = await fetchData('/tasks');
+            if (!data) return;
+            
+            document.getElementById('queuedTasks').textContent = data.counts?.queued || 0;
+            document.getElementById('activeTasks').textContent = data.counts?.active || 0;
+            document.getElementById('completedTasks').textContent = data.counts?.completed || 0;
+            
+            // Update task list
+            const taskList = document.getElementById('taskQueueList');
+            const tasks = data.queued || [];
+            
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<div class="task-item"><div class="task-info"><div class="task-name">No tasks in queue</div><div class="task-description">All tasks are processed</div></div></div>';
+                return;
+            }
+            
+            taskList.innerHTML = tasks.slice(0, 5).map(task => `
+                <div class="task-item ${task.status?.toLowerCase() || 'pending'}">
+                    <div class="task-info">
+                        <div class="task-name">${task.name}</div>
+                        <div class="task-description">${task.description || 'No description'}</div>
+                    </div>
+                    <div class="task-status">${task.priority || 'Medium'}</div>
+                </div>
+            `).join('');
+            
+            if (tasks.length > 5) {
+                taskList.innerHTML += `<div class="task-item"><div class="task-info"><div class="task-name">...and ${tasks.length - 5} more tasks</div></div></div>`;
+            }
+        }
+        
+        // Update agent capabilities
+        async function updateCapabilities() {
+            const data = await fetchData('/agent/capabilities');
+            if (!data) return;
+            
+            document.getElementById('totalCapabilities').textContent = data.count || 0;
+            
+            const capabilitiesList = document.getElementById('capabilitiesList');
+            const capabilities = data.capabilities || [];
+            
+            if (capabilities.length === 0) {
+                capabilitiesList.innerHTML = '<div class="task-item"><div class="task-info"><div class="task-name">No capabilities loaded</div></div></div>';
+                return;
+            }
+            
+            capabilitiesList.innerHTML = capabilities.slice(0, 5).map(cap => `
+                <div class="task-item">
+                    <div class="task-info">
+                        <div class="task-name">${cap.name}</div>
+                        <div class="task-description">${cap.description}</div>
+                    </div>
+                    <div class="task-status">${cap.category}</div>
+                </div>
+            `).join('');
+        }
+        
+        // Update recommendations
+        async function updateRecommendations() {
+            const data = await fetchData('/recommendations');
+            if (!data) return;
+            
+            const recommendationsList = document.getElementById('recommendationsList');
+            const recommendations = data.recommendations || [];
+            
+            if (recommendations.length === 0) {
+                recommendationsList.innerHTML = '<div class="task-item"><div class="task-info"><div class="task-name">No recommendations available</div><div class="task-description">System is running optimally</div></div></div>';
+                return;
+            }
+            
+            recommendationsList.innerHTML = recommendations.map(rec => `
+                <div class="recommendation-item ${rec.priority.toLowerCase()}">
+                    <div class="recommendation-title">${rec.title}</div>
+                    <div class="recommendation-description">${rec.description}</div>
+                    <div class="recommendation-action">${rec.action}</div>
+                </div>
+            `).join('');
+        }
+        
+        // Control functions
+        async function executeNextTask() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks/execute-next`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                showToast(`Task executed: ${result.success ? 'Success' : 'Failed'}`, result.success ? 'success' : 'error');
+                refreshAll();
+            } catch (error) {
+                showToast(`Failed to execute task: ${error.message}`, 'error');
+            }
+        }
+        
+        async function startEngine() {
+            try {
+                const response = await fetch(`${API_BASE}/engine/start`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                showToast('Engine started successfully', 'success');
+                refreshAll();
+            } catch (error) {
+                showToast(`Failed to start engine: ${error.message}`, 'error');
+            }
+        }
+        
+        async function pauseEngine() {
+            try {
+                const response = await fetch(`${API_BASE}/engine/pause`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                showToast('Engine paused', 'success');
+                refreshAll();
+            } catch (error) {
+                showToast(`Failed to pause engine: ${error.message}`, 'error');
+            }
+        }
+        
+        async function resumeEngine() {
+            try {
+                const response = await fetch(`${API_BASE}/engine/resume`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                showToast('Engine resumed', 'success');
+                refreshAll();
+            } catch (error) {
+                showToast(`Failed to resume engine: ${error.message}`, 'error');
+            }
+        }
+        
+        async function stopEngine() {
+            if (!confirm('Are you sure you want to stop the engine? All queued tasks will be lost.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/engine/stop`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                showToast('Engine stopped', 'success');
+                refreshAll();
+            } catch (error) {
+                showToast(`Failed to stop engine: ${error.message}`, 'error');
+            }
+        }
+        
+        async function resetEngine() {
+            if (!confirm('Are you sure you want to reset the engine? All state will be lost.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/engine/reset`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                showToast('Engine reset', 'success');
+                refreshAll();
+            } catch (error) {
+                showToast(`Failed to reset engine: ${error.message}`, 'error');
+            }
+        }
+        
+        async function triggerHeartbeat() {
+            try {
+                const response = await fetch(`${API_BASE}/heartbeat`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                showToast('Heartbeat triggered', 'success');
+                refreshAll();
+            } catch (error) {
+                showToast(`Failed to trigger heartbeat: ${error.message}`, 'error');
+            }
+        }
+        
+        async function syncCronJobs() {
+            try {
+                const response = await fetch(`${API_BASE}/integrations/cron/sync`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                showToast('Cron jobs synchronized', 'success');
+            } catch (error) {
+                showToast(`Failed to sync cron jobs: ${error.message}`, 'error');
+            }
+        }
+        
+        async function checkForUpdates() {
+            try {
+                const response = await fetch(`${API_BASE}/integrations/updates/check`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                showToast(result.message, 'success');
+            } catch (error) {
+                showToast(`Failed to check updates: ${error.message}`, 'error');
+            }
+        }
+        
+        // Refresh functions
+        function refreshAll() {
+            updateEngineStatus();
+            updatePerformance();
+            updateTaskQueue();
+            updateCapabilities();
+            updateRecommendations();
+        }
+        
+        function refreshStatus() {
+            updateEngineStatus();
+            showToast('Status refreshed', 'success');
+        }
+        
+        function refreshCharts() {
+            // In a real implementation, this would update the charts
+            showToast('Charts refreshed', 'success');
+        }
+        
+        function refreshHealth() {
+            // In a real implementation, this would update health charts
+            showToast('Health data refreshed', 'success');
+        }
+        
+        function refreshRecommendations() {
+            updateRecommendations();
+            showToast('Recommendations refreshed', 'success');
+        }
+        
+        // Utility functions
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (days > 0) return `${days}d ${hours}h`;
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            if (minutes > 0) return `${minutes}m ${secs}s`;
+            return `${secs}s`;
+        }
+        
+        // Initialize dashboard
+        function initDashboard() {
+            // Load all data
+            refreshAll();
+            
+            // Set up auto-refresh
+            refreshInterval = setInterval(refreshAll, 10000); // Refresh every 10 seconds
+            
+            // Show welcome message
+            setTimeout(() => {
+                showToast('Dashboard loaded successfully', 'success');
+            }, 1000);
+        }
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
