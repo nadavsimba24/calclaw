@@ -1,0 +1,131 @@
+# 🛡️ Default Security Policy
+# Policy configuration for Calclaw Enterprise
+
+policy:
+  name: "Default Enterprise Policy"
+  description: "Balanced security policy for enterprise deployments"
+  
+  network:
+    egress:
+      default_action: "deny"
+      allowed_rules:
+        - destination: "localhost"
+          protocol: "tcp"
+          ports: [11434]
+          action: "allow"
+          description: "Local Ollama instance"
+        
+        - destination: "*.openai.com"
+          protocol: "tcp" 
+          ports: [443]
+          action: "require_approval"
+          description: "OpenAI API access"
+          approval_reason: "External API access requires approval"
+    
+    ingress:
+      default_action: "deny"
+      allowed_rules: []
+    
+    dns:
+      allowed_domains: ["localhost", "*.local"]
+      use_system_dns: false
+      dns_servers: ["1.1.1.1", "8.8.8.8"]
+    
+    require_approval: true
+    approval_timeout_seconds: 3600
+  
+  filesystem:
+    read_only_paths:
+      - path: "/etc"
+        recursive: true
+        description: "System configuration"
+      
+      - path: "/usr"
+        recursive: true
+        description: "System binaries"
+    
+    writable_paths:
+      - path: "/tmp"
+        recursive: true
+        description: "Temporary files"
+      
+      - path: "/workspace"
+        recursive: true
+        description: "User workspace"
+    
+    blocked_paths:
+      - path: "/root"
+        recursive: true
+        description: "Root directory"
+      
+      - path: "/home"
+        recursive: true
+        description: "User home directories"
+    
+    quotas:
+      - path: "/workspace"
+        max_size_mb: 1024
+        warning_threshold: 0.8
+    
+    backup:
+      enabled: true
+      frequency: "daily"
+      retention_days: 30
+      encryption: true
+  
+  inference:
+    allowed_models:
+      - provider: "ollama"
+        pattern: "gemma*"
+        max_context_length: 8192
+        require_approval: false
+      
+      - provider: "ollama"
+        pattern: "phi*"
+        max_context_length: 4096
+        require_approval: false
+      
+      - provider: "openai"
+        pattern: "gpt-*"
+        max_context_length: 16384
+        require_approval: true
+    
+    blocked_models:
+      - provider: "any"
+        pattern: "*large*"
+        require_approval: true
+    
+    max_tokens_per_request: 4096
+    
+    rate_limits:
+      - pattern: "*"
+        requests_per_hour: 1000
+        tokens_per_hour: 1000000
+    
+    privacy_rules:
+      - data_type: "personal_information"
+        action: "require_approval"
+        justification: "Personal information requires approval"
+      
+      - data_type: "health_data"
+        action: "block"
+        justification: "Health data is blocked by policy"
+  
+  audit:
+    enabled: true
+    retention_days: 90
+    events_to_log:
+      - "network_access"
+      - "filesystem_access"
+      - "inference_request"
+      - "policy_change"
+      - "user_authentication"
+    
+    siem_integration:
+      enabled: false
+      siem_type: "splunk"
+      endpoint: ""
+      format: "json"
+    
+    real_time_alerts: true
+    encryption: true
